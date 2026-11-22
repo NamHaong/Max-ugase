@@ -17,9 +17,21 @@ struct BatteryView: View {
                 Section("Điện (đọc từ IORegistry)") {
                     if let v = b.voltageV { RowKV("Điện áp", String(format: "%.3f V", v)) }
                     if let a = b.amperageA { RowKV("Dòng", String(format: "%+.0f mA", a * 1000)) }
-                    if let w = b.powerW { RowKV(w >= 0 ? "Công suất sạc" : "Công suất tiêu thụ", String(format: "%.2f W", abs(w))) }
+                    else if let m = s.estCurrentMA { RowKV("Dòng (ước tính)", String(format: "%+.0f mA", m)) }
+                    if let w = s.bestPowerW {
+                        RowKV((w >= 0 ? "Công suất sạc" : "Công suất tiêu thụ") + (s.powerIsEstimate ? " (ước tính)" : ""),
+                              String(format: "%.2f W", abs(w)))
+                    } else {
+                        Text(b.isCharging ? "Đang thu thập dữ liệu để ước tính công suất (cần vài phút, pin phải đổi ≥ 2%)."
+                                          : "Cắm sạc để đo công suất sạc.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let p = b.systemPowerInW { RowKV("Công suất vào từ củ sạc", String(format: "%.2f W", p)) }
                     if let ad = b.adapterWatts { RowKV("Củ sạc", "\(ad) W") }
-                    if b.voltageV == nil { Text("Không đọc được AppleSmartBattery.").font(.caption).foregroundStyle(.orange) }
+                    if !b.ioRegistryReadable {
+                        Text("iOS chặn đọc AppleSmartBattery (không có entitlement). Công suất chỉ là ước tính từ tốc độ tăng %. Xem Thiết bị › Chẩn đoán.")
+                            .font(.caption).foregroundStyle(.orange)
+                    }
                 }
                 Section("Sức khỏe pin") {
                     if let h = b.healthPercent { RowKV("Độ chai (dung lượng tối đa)", String(format: "%.1f%%", h)) }
@@ -53,13 +65,14 @@ struct BatteryView: View {
     }
 
     private func estimate(_ b: BatteryInfo) -> String? {
-        guard let cur = b.currentCapacity, let mx = b.maxCapacity, let a = b.amperageA, abs(a) > 0.02 else { return nil }
-        let mA = abs(a) * 1000
-        if a > 0 {
-            let hours = Double(max(0, mx - cur)) / mA
-            return "Đầy sau ~\(formatDuration(hours * 3600))"
-        } else {
-            return "Dùng được ~\(formatDuration(Double(cur) / mA * 3600))"
-        }
+        // Dùng %/giờ từ dòng đo được hoặc ước tính
+        let mA: Double
+        let cap: Double
+        if let a = b.amperageA, abs(a) > 0.02, let mx = b.maxCapacity ?? b.designCapacity { mA = a * 1000; cap = Double(mx) }
+        else if let m = s.estCurrentMA, abs(m) > 20, let c = ChargeEstimator.capacityTable[sysctlString("hw.machine")] { mA = m; cap = c }
+        else { return nil }
+        let ratePerHour = mA / cap * 100            // %/giờ
+        if mA > 0 { return "Đầy sau ~\(formatDuration(max(0, 100 - b.level) / ratePerHour * 3600))" }
+        return "Dùng được ~\(formatDuration(b.level / abs(ratePerHour) * 3600))"
     }
 }

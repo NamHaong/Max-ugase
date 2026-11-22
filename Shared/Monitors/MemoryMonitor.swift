@@ -9,10 +9,15 @@ struct MemoryInfo {
     var inactive: UInt64 = 0
     var wired: UInt64 = 0
     var compressed: UInt64 = 0
+    var appMemory: UInt64 = 0      // bộ nhớ ứng dụng (internal - purgeable)
+    var purgeable: UInt64 = 0
+    var cached: UInt64 = 0         // file-backed (external), có thể thu hồi
     var appFootprint: UInt64 = 0   // RAM chính app này đang dùng
     var availableToApp: UInt64 = 0 // RAM còn cấp được trước khi bị jetsam
 
-    var used: UInt64 { active + wired + compressed }
+    /// Công thức giống Activity Monitor: bộ nhớ ứng dụng + wired + nén.
+    var used: UInt64 { min(total, appMemory + wired + compressed) }
+    var available: UInt64 { total > used ? total - used : 0 }
     var usedPercent: Double { total > 0 ? Double(used) / Double(total) * 100 : 0 }
 }
 
@@ -35,6 +40,11 @@ enum MemoryMonitor {
             info.inactive = UInt64(stats.inactive_count) * page
             info.wired = UInt64(stats.wire_count) * page
             info.compressed = UInt64(stats.compressor_page_count) * page
+            info.purgeable = UInt64(stats.purgeable_count) * page
+            info.cached = UInt64(stats.external_page_count) * page
+            let internalPages = UInt64(stats.internal_page_count)
+            let purg = UInt64(stats.purgeable_count)
+            info.appMemory = (internalPages > purg ? internalPages - purg : 0) * page
         }
 
         var vmInfo = task_vm_info_data_t()

@@ -44,4 +44,12 @@ enum ThermalMonitor {
         let v = s.filter { $0.category == category }.map(\.celsius)
         return v.isEmpty ? nil : v.reduce(0, +) / Double(v.count)
     }
+
+    /// Nhiệt độ trung bình toàn máy: trung bình mọi cảm biến HID hợp lệ; nếu không có thì dùng nhiệt độ pin.
+    static func overallAverage(sensors: [ThermalSensor], battery: Double?) -> (value: Double, source: String)? {
+        let v = sensors.map(\.celsius).filter { $0 > 5 && $0 < 90 }
+        if !v.isEmpty { return (v.reduce(0, +) / Double(v.count), "\(v.count) cảm biến") }
+        if let b = battery { return (b, "cảm biến pin") }
+        return nil
+    }
 }

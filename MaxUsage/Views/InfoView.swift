@@ -19,7 +19,11 @@ struct InfoView: View {
                     RowKV("RAM", d.ramTotal.bytesString)
                     RowKV("RAM nén", s.memory.compressed.bytesString)
                     RowKV("RAM wired", s.memory.wired.bytesString)
-                    RowKV("RAM trống", s.memory.free.bytesString)
+                    RowKV("RAM ứng dụng", s.memory.appMemory.bytesString)
+                    RowKV("RAM đệm file (thu hồi được)", s.memory.cached.bytesString)
+                    RowKV("RAM purgeable", s.memory.purgeable.bytesString)
+                    RowKV("RAM inactive", s.memory.inactive.bytesString)
+                    RowKV("RAM free", s.memory.free.bytesString)
                     RowKV("RAM app này", s.memory.appFootprint.bytesString)
                     RowKV("L1d / L2 cache", "\(d.l1d / 1024) KB / \(d.l2 / 1024) KB")
                     RowKV("Kích thước trang", "\(d.pageSize) B")
@@ -33,6 +37,9 @@ struct InfoView: View {
                     RowKV("Kích thước (pt)", "\(Int(d.screenPoints.width)) × \(Int(d.screenPoints.height)) @\(Int(d.screenScale))x")
                     RowKV("Tần số quét tối đa", "\(d.maxRefreshRate) Hz")
                     RowKV("Độ sáng", "\(Int(d.brightness * 100))%")
+                }
+                Section {
+                    NavigationLink("Chẩn đoán IORegistry / cảm biến") { DiagnosticsView() }
                 }
                 Section("Nhân hệ điều hành") { Text(d.kernel).font(.caption2).textSelection(.enabled) }
             }

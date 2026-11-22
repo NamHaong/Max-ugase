@@ -18,9 +18,18 @@ final class SystemStore {
     var gpu = GPUInfo()
     var sensors: [ThermalSensor] = []
     var thermalState = ThermalMonitor.stateText
+    var avgTemp: (value: Double, source: String)?
     var net = NetworkMonitor.Speed()
+    var netCounters: [String: (UInt32, UInt32)] = [:]
     var processes: [ProcInfo] = []
+    var estPowerW: Double?
+    var estCurrentMA: Double?
     let device = DeviceDetails()
+    let speedTest = SpeedTestModel()
+
+    /// Công suất tốt nhất có: đo thật, nếu không thì ước tính.
+    var bestPowerW: Double? { battery.powerW ?? estPowerW }
+    var powerIsEstimate: Bool { battery.powerW == nil && estPowerW != nil }
 
     // Lịch sử cho biểu đồ (giữ 120 mẫu)
     var cpuHistory: [Sample] = []
@@ -33,13 +42,16 @@ final class SystemStore {
     private let cpuMon = CPUMonitor()
     private let procMon = ProcessMonitor()
     private let netMon = NetworkMonitor()
+    private let chargeEst = ChargeEstimator()
     private var timer: Timer?
     private var tick = 0
 
     func start() {
         guard timer == nil else { return }
         refresh()
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in self?.refresh() }
+        let t = Timer(timeInterval: interval, repeats: true) { [weak self] _ in self?.refresh() }
+        RunLoop.main.add(t, forMode: .common)   // vẫn chạy khi đang cuộn
+        timer = t
     }
 
     func stop() { timer?.invalidate(); timer = nil }
@@ -59,15 +71,21 @@ final class SystemStore {
         battery = BatteryMonitor.read()
         gpu = GPUMonitor.read()
         net = netMon.speed()
+        netCounters = netMon.counters
         thermalState = ThermalMonitor.stateText
         sensors = ThermalMonitor.sensors()
+        avgTemp = ThermalMonitor.overallAverage(sensors: sensors, battery: battery.temperatureC)
         if tick % 5 == 1 { storage = StorageMonitor.read() }
         if tick % 2 == 1 { processes = procMon.read() }
+
+        chargeEst.update(level: battery.level, charging: battery.isCharging, designCapacity: battery.designCapacity)
+        estPowerW = chargeEst.estimatedPowerW
+        estCurrentMA = chargeEst.estimatedCurrentMA
 
         push(&cpuHistory, cpu.total)
         push(&memHistory, memory.usedPercent)
         push(&gpuHistory, gpu.utilization)
-        push(&tempHistory, battery.temperatureC ?? ThermalMonitor.average(of: "CPU / SoC", in: sensors))
-        push(&powerHistory, battery.powerW)
+        push(&tempHistory, avgTemp?.value)
+        push(&powerHistory, bestPowerW)
     }
 }

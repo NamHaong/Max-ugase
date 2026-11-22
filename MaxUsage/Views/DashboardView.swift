@@ -11,16 +11,22 @@ struct DashboardView: View {
                         GaugeCard(title: "CPU", value: s.cpu.total,
                                   detail: "\(s.cpu.cores.count) nhân", systemImage: "cpu")
                         GaugeCard(title: "RAM", value: s.memory.usedPercent,
-                                  detail: "\(s.memory.used.bytesString) / \(s.memory.total.bytesString)", systemImage: "memorychip")
+                                  detail: "\(s.memory.used.bytesString) / \(s.memory.total.bytesString) · trống \(s.memory.available.bytesString)",
+                                  systemImage: "memorychip")
                         GaugeCard(title: "Ổ cứng", value: s.storage.usedPercent,
                                   detail: "Trống \(s.storage.freeRaw.bytesString)", systemImage: "internaldrive")
                         GaugeCard(title: "GPU", value: s.gpu.utilization ?? 0,
-                                  detail: s.gpu.utilization == nil ? "Không đọc được" : "Render \(Int(s.gpu.rendererUtilization ?? 0))%",
-                                  systemImage: "display")
+                                  detail: s.gpu.utilization == nil
+                                      ? "\(s.gpu.name ?? "GPU") · iOS chặn đo tải"
+                                      : "Render \(Int(s.gpu.rendererUtilization ?? 0))%",
+                                  systemImage: "display",
+                                  display: s.gpu.utilization == nil ? "N/A" : nil)
                         GaugeCard(title: "Pin", value: s.battery.level,
                                   detail: s.battery.isCharging ? "Đang sạc" : "Đang dùng", systemImage: "battery.75")
-                        GaugeCard(title: "Nhiệt", value: thermalPercent,
-                                  detail: s.thermalState, systemImage: "thermometer.medium")
+                        GaugeCard(title: "Nhiệt độ TB", value: tempBar,
+                                  detail: "\(s.thermalState)" + (s.avgTemp.map { " · \($0.source)" } ?? ""),
+                                  systemImage: "thermometer.medium",
+                                  display: s.avgTemp.map { String(format: "%.1f°C", $0.value) } ?? "—")
                     }
 
                     coresCard
@@ -46,14 +52,10 @@ struct DashboardView: View {
         }
     }
 
-    private var thermalPercent: Double {
-        switch ProcessInfo.processInfo.thermalState {
-        case .nominal: return 20
-        case .fair: return 50
-        case .serious: return 80
-        case .critical: return 100
-        @unknown default: return 0
-        }
+    /// Độ dài thanh nhiệt: 25°C → 0%, 50°C → 100%.
+    private var tempBar: Double {
+        guard let t = s.avgTemp?.value else { return 0 }
+        return min(max((t - 25) / 25 * 100, 0), 100)
     }
 
     private var coresCard: some View {
@@ -76,6 +78,22 @@ struct DashboardView: View {
             Text("Mạng").font(.subheadline.bold())
             RowKV("Wi-Fi ↓ / ↑", "\(formatSpeed(s.net.wifiDown)) / \(formatSpeed(s.net.wifiUp))")
             RowKV("Di động ↓ / ↑", "\(formatSpeed(s.net.cellDown)) / \(formatSpeed(s.net.cellUp))")
+            if s.netCounters.isEmpty {
+                Text("Không đọc được bộ đếm giao diện mạng.").font(.caption).foregroundStyle(.orange)
+            }
+            Divider()
+            let t = s.speedTest
+            HStack {
+                Button { Task { await t.run() } } label: {
+                    Label(t.running ? "Đang đo..." : "Đo tốc độ mạng thật", systemImage: "speedometer")
+                }
+                .disabled(t.running)
+                Spacer()
+            }
+            if let p = t.pingMs { RowKV("Ping", String(format: "%.0f ms", p)) }
+            if let d = t.downMbps { RowKV("Tải xuống", String(format: "%.1f Mbps", d)) }
+            if let u = t.upMbps { RowKV("Tải lên", String(format: "%.1f Mbps", u)) }
+            if let e = t.error { Text(e).font(.caption).foregroundStyle(.red) }
         }
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))

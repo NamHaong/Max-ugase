@@ -29,6 +29,26 @@ NSDictionary *MUReadIORegistry(NSString *serviceName) {
     return CFBridgingRelease(props);
 }
 
+typedef io_object_t io_iterator_t;
+extern kern_return_t IOServiceGetMatchingServices(mach_port_t masterPort, CFDictionaryRef matching, io_iterator_t *existing);
+extern io_object_t IOIteratorNext(io_iterator_t iterator);
+
+NSArray<NSDictionary *> *MUReadIORegistryAll(NSString *serviceName) {
+    io_iterator_t it = 0;
+    if (IOServiceGetMatchingServices(0, IOServiceMatching(serviceName.UTF8String), &it) != KERN_SUCCESS || !it) return @[];
+    NSMutableArray *out = [NSMutableArray array];
+    io_object_t svc;
+    while ((svc = IOIteratorNext(it)) != 0) {
+        CFMutableDictionaryRef props = NULL;
+        if (IORegistryEntryCreateCFProperties(svc, &props, kCFAllocatorDefault, 0) == KERN_SUCCESS && props) {
+            [out addObject:CFBridgingRelease(props)];
+        }
+        IOObjectRelease(svc);
+    }
+    IOObjectRelease(it);
+    return out;
+}
+
 // ---------------------------------------------------------------- HID thermal sensors (private)
 typedef struct __IOHIDEvent *IOHIDEventRef;
 typedef struct __IOHIDServiceClient *IOHIDServiceClientRef;

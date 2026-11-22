@@ -12,6 +12,7 @@ struct SensorsView: View {
             List {
                 Section("Trạng thái nhiệt hệ thống") {
                     RowKV("iOS báo", s.thermalState)
+                    if let a = s.avgTemp { RowKV("Trung bình toàn máy", String(format: "%.1f °C (%@)", a.value, a.source)) }
                     if let t = s.battery.temperatureC { RowKV("Nhiệt độ pin", String(format: "%.1f °C", t)) }
                     if let c = ThermalMonitor.average(of: "CPU / SoC", in: s.sensors) { RowKV("CPU/SoC (TB)", String(format: "%.1f °C", c)) }
                     if let g = ThermalMonitor.average(of: "GPU", in: s.sensors) { RowKV("GPU (TB)", String(format: "%.1f °C", g)) }

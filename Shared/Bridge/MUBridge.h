@@ -5,6 +5,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// Đọc toàn bộ thuộc tính của 1 service IORegistry (vd "AppleSmartBattery", "IOAccelerator").
 NSDictionary *_Nullable MUReadIORegistry(NSString *serviceName);
 
+/// Đọc thuộc tính của TẤT CẢ service khớp tên (vd có nhiều GPU/accelerator).
+NSArray<NSDictionary *> *MUReadIORegistryAll(NSString *serviceName);
+
 /// Đọc cảm biến nhiệt qua IOHIDEventSystem (private). Mỗi phần tử: {name, value(°C)}.
 NSArray<NSDictionary *> *MUReadThermalSensors(void);
 
