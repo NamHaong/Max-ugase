@@ -35,11 +35,13 @@ struct DashboardView: View {
             }
             .navigationTitle("Max Usage")
             .toolbar {
-                Menu {
-                    ForEach([0.5, 1.0, 2.0, 5.0], id: \.self) { v in
-                        Button("Cập nhật mỗi \(v.formatted())s") { s.setInterval(v) }
-                    }
-                } label: { Image(systemName: "timer") }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        ForEach([0.5, 1.0, 2.0, 5.0], id: \.self) { v in
+                            Button("Cập nhật mỗi \(String(format: "%g", v))s") { s.setInterval(v) }
+                        }
+                    } label: { Image(systemName: "timer") }
+                }
             }
         }
     }

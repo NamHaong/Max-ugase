@@ -1,6 +1,9 @@
 #import "MUBridge.h"
 #import <CoreFoundation/CoreFoundation.h>
 #import <mach/mach.h>
+#import <mach/mach_time.h>
+#include <string.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <errno.h>
 

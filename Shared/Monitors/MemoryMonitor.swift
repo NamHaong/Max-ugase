@@ -1,5 +1,6 @@
 import Foundation
 import Darwin
+import os
 
 struct MemoryInfo {
     var total: UInt64 = 0

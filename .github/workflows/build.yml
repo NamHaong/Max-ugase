@@ -34,7 +34,13 @@ jobs:
             -configuration Release \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            build 2>&1 | tee build.log | tail -n 200
+            build 2>&1 | tee build.log | tail -n 50
+
+      - name: Liệt kê lỗi biên dịch
+        if: failure()
+        run: |
+          grep -E "error:" build.log | sed 's#/Users/runner/work/[^/]*/[^/]*/##' | sort -u | head -50 | while read -r l; do echo "::error::$l"; done
+          grep -E "error:" build.log | sort -u | head -50
 
       - name: Ký giả bằng entitlement (ldid) và đóng IPA
         run: |
