@@ -1,0 +1,64 @@
+name: Build IPA
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Chọn Xcode mới nhất có sẵn
+        run: |
+          ls /Applications | grep -i xcode || true
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - name: Cài công cụ
+        run: brew install xcodegen ldid
+
+      - name: Tạo project Xcode
+        run: xcodegen generate
+
+      - name: Build (không ký)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project MaxUsage.xcodeproj \
+            -scheme MaxUsage \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee build.log | tail -n 200
+
+      - name: Ký giả bằng entitlement (ldid) và đóng IPA
+        run: |
+          APP=build/Build/Products/Release-iphoneos/MaxUsage.app
+          ldid -SMaxUsage.entitlements "$APP/PlugIns/MaxUsageWidget.appex/MaxUsageWidget"
+          ldid -SMaxUsage.entitlements "$APP/MaxUsage"
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qr MaxUsage.ipa Payload
+          # TrollStore cũng nhận .tipa
+          cp MaxUsage.ipa MaxUsage.tipa
+          ls -lh MaxUsage.*
+
+      - name: Tải IPA lên
+        uses: actions/upload-artifact@v4
+        with:
+          name: MaxUsage-ipa
+          path: |
+            MaxUsage.ipa
+            MaxUsage.tipa
+
+      - name: Tải log build lên (khi lỗi)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
