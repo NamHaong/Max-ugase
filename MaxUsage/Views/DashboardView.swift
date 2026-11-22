@@ -62,7 +62,7 @@ struct DashboardView: View {
             ForEach(Array(s.cpu.cores.enumerated()), id: \.offset) { i, v in
                 HStack {
                     Text("Nhân \(i + 1)").font(.caption).frame(width: 52, alignment: .leading)
-                    ProgressView(value: v, total: 100).tint(tint(for: v))
+                    ProgressView(value: v, total: 100).tint(usageColor(for: v))
                     Text("\(Int(v))%").font(.caption).monospacedDigit().frame(width: 38, alignment: .trailing)
                 }
             }

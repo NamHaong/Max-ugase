@@ -44,7 +44,7 @@ struct ProcessesView: View {
                                 Text("PID \(p.pid) · \(p.threads) luồng").font(.caption).foregroundStyle(.secondary)
                                 Spacer()
                                 Text(String(format: "CPU %.1f%%", p.cpuPercent)).font(.caption).monospacedDigit()
-                                    .foregroundStyle(tint(for: p.cpuPercent))
+                                    .foregroundStyle(usageColor(for: p.cpuPercent))
                             }
                         }
                         .swipeActions {

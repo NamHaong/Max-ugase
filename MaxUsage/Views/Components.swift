@@ -1,7 +1,7 @@
 import SwiftUI
 import Charts
 
-func tint(for pct: Double) -> Color { pct < 60 ? .green : (pct < 85 ? .orange : .red) }
+func usageColor(for pct: Double) -> Color { pct < 60 ? .green : (pct < 85 ? .orange : .red) }
 
 struct GaugeCard: View {
     let title: String
@@ -13,7 +13,7 @@ struct GaugeCard: View {
         VStack(alignment: .leading, spacing: 8) {
             Label(title, systemImage: systemImage).font(.caption).foregroundStyle(.secondary)
             Text("\(Int(value))%").font(.system(size: 30, weight: .bold, design: .rounded)).monospacedDigit()
-            ProgressView(value: min(max(value, 0), 100), total: 100).tint(tint(for: value))
+            ProgressView(value: min(max(value, 0), 100), total: 100).tint(usageColor(for: value))
             Text(detail).font(.caption2).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
         }
         .padding(12)
